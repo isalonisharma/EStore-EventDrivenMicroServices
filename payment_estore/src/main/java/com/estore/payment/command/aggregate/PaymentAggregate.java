@@ -10,18 +10,17 @@ import com.estore.core.command.ProcessPaymentCommand;
 import com.estore.core.event.PaymentProcessedEvent;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Aggregate
+@NoArgsConstructor
 public class PaymentAggregate {
 
 	@AggregateIdentifier
 	private String paymentId;
 
 	private String orderId;
-
-	public PaymentAggregate() {
-	}
 
 	@CommandHandler
 	public PaymentAggregate(ProcessPaymentCommand processPaymentCommand) {

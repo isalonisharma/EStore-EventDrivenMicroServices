@@ -19,8 +19,7 @@ public class UsersQueryController {
     QueryGateway queryGateway;
 
     @GetMapping("/{userId}/payment-details")
-    public User getUserPaymentDetails(@PathVariable String userId) {
-   
+    public User getUserPaymentDetails(@PathVariable String userId) {   
         FetchUserPaymentDetailQuery query = new FetchUserPaymentDetailQuery(userId);
         return queryGateway.query(query, ResponseTypes.instanceOf(User.class)).join();
     }

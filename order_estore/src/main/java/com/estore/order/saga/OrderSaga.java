@@ -1,6 +1,7 @@
 package com.estore.order.saga;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.axonframework.commandhandling.CommandCallback;
 import org.axonframework.commandhandling.CommandMessage;
@@ -79,7 +80,8 @@ public class OrderSaga {
 					.join();
 		} catch (Exception ex) {
 			LOGGER.error(ex.getMessage());
-
+			LOGGER.error("Unable to fecth payment details for orderId: " + productReservedEvent.getOrderId()
+					+ ",  userId: " + productReservedEvent.getUserId());
 			// Start compensating transaction
 			return;
 		}
@@ -97,7 +99,7 @@ public class OrderSaga {
 
 		String result = null;
 		try {
-			result = commandGateway.sendAndWait(proccessPaymentCommand);
+			result = commandGateway.sendAndWait(proccessPaymentCommand, 10, TimeUnit.SECONDS);
 		} catch (Exception ex) {
 			LOGGER.error(ex.getMessage());
 			// Start compensating transaction
