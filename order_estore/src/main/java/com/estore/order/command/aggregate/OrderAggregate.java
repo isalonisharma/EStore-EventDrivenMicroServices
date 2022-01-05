@@ -7,8 +7,10 @@ import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 import org.springframework.beans.BeanUtils;
 
+import com.estore.order.command.ApproveOrderCommand;
 import com.estore.order.command.CreateOrderCommand;
 import com.estore.order.core.enumeration.OrderStatus;
+import com.estore.order.core.event.OrderApprovedEvent;
 import com.estore.order.core.event.OrderCreatedEvent;
 
 import lombok.Data;
@@ -44,4 +46,17 @@ public class OrderAggregate {
 		this.setQuantity(orderCreatedEvent.getQuantity());
 		this.setOrderStatus(orderCreatedEvent.getOrderStatus());
 	}
+
+	@CommandHandler
+	public void handle(ApproveOrderCommand approveOrderCommand) {
+		// Create and publish the OrderApprovedEvent
+		OrderApprovedEvent orderApprovedEvent = new OrderApprovedEvent(approveOrderCommand.getOrderId());
+
+		AggregateLifecycle.apply(orderApprovedEvent);
+	}
+	
+	@EventSourcingHandler
+    public void on(OrderApprovedEvent orderApprovedEvent) {
+    	this.orderStatus = orderApprovedEvent.getOrderStatus();
+    }
 }
