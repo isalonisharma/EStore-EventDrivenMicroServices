@@ -9,6 +9,7 @@ import com.estore.order.core.data.OrderEntity;
 import com.estore.order.core.data.OrderRepository;
 import com.estore.order.core.event.OrderApprovedEvent;
 import com.estore.order.core.event.OrderCreatedEvent;
+import com.estore.order.core.event.OrderRejectedEvent;
 
 @Component
 @ProcessingGroup("order-group")
@@ -37,6 +38,13 @@ public class OrderEventsHandler {
     	}
     	
     	orderEntity.setOrderStatus(orderApprovedEvent.getOrderStatus());
+    	orderRepository.save(orderEntity);
+    }
+	
+	@EventHandler
+    public void on(OrderRejectedEvent orderRejectedEvent) {
+    	OrderEntity orderEntity = orderRepository.findByOrderId(orderRejectedEvent.getOrderId());
+    	orderEntity.setOrderStatus(orderRejectedEvent.getOrderStatus());
     	orderRepository.save(orderEntity);
     }
 }

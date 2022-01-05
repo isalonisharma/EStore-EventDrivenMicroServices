@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
+import com.estore.core.event.ProductReservationCancelledEvent;
 import com.estore.core.event.ProductReservedEvent;
 import com.estore.product.core.data.ProductEntity;
 import com.estore.product.core.data.ProductRepository;
@@ -18,7 +19,7 @@ import com.estore.product.core.event.ProductCreatedEvent;
 public class ProductEventHandler {
 	private final ProductRepository productRepository;
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProductEventHandler.class);
-	
+
 	public ProductEventHandler(ProductRepository productsRepository) {
 		this.productRepository = productsRepository;
 	}
@@ -39,21 +40,36 @@ public class ProductEventHandler {
 	public void handle(Exception exception) throws Exception {
 		throw exception;
 	}
-	
+
 	@EventHandler
 	public void on(ProductReservedEvent productReservedEvent) {
 		ProductEntity productEntity = productRepository.findByProductId(productReservedEvent.getProductId());
-		
+
 		LOGGER.debug("ProductReservedEvent: Current product quantity " + productEntity.getQuantity());
-		
+
 		productEntity.setQuantity(productEntity.getQuantity() - productReservedEvent.getQuantity());
-		
-		
+
 		productRepository.save(productEntity);
-		
+
 		LOGGER.debug("ProductReservedEvent: New product quantity " + productEntity.getQuantity());
- 	
-		LOGGER.info("ProductReservedEvent is called for productId:" + productReservedEvent.getProductId() +
-				" and orderId: " + productReservedEvent.getOrderId());
+
+		LOGGER.info("ProductReservedEvent is called for productId:" + productReservedEvent.getProductId()
+				+ " and orderId: " + productReservedEvent.getOrderId());
+	}
+
+	@EventHandler
+	public void on(ProductReservationCancelledEvent productReservationCancelledEvent) {
+		ProductEntity currentlyStoredProduct = productRepository
+				.findByProductId(productReservationCancelledEvent.getProductId());
+
+		LOGGER.debug(
+				"ProductReservationCancelledEvent: Current product quantity " + currentlyStoredProduct.getQuantity());
+
+		int newQuantity = currentlyStoredProduct.getQuantity() + productReservationCancelledEvent.getQuantity();
+		currentlyStoredProduct.setQuantity(newQuantity);
+
+		productRepository.save(currentlyStoredProduct);
+
+		LOGGER.debug("ProductReservationCancelledEvent: New product quantity " + currentlyStoredProduct.getQuantity());
 	}
 }
