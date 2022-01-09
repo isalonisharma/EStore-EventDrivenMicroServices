@@ -10,9 +10,9 @@ import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.modelling.saga.EndSaga;
 import org.axonframework.modelling.saga.SagaEventHandler;
-import org.axonframework.modelling.saga.SagaLifecycle;
 import org.axonframework.modelling.saga.StartSaga;
 import org.axonframework.queryhandling.QueryGateway;
+import org.axonframework.queryhandling.QueryUpdateEmitter;
 import org.axonframework.spring.stereotype.Saga;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +31,8 @@ import com.estore.order.command.RejectOrderCommand;
 import com.estore.order.core.event.OrderApprovedEvent;
 import com.estore.order.core.event.OrderCreatedEvent;
 import com.estore.order.core.event.OrderRejectedEvent;
+import com.estore.order.core.model.OrderSummary;
+import com.estore.order.query.FindOrderQuery;
 
 @Saga
 public class OrderSaga {
@@ -43,6 +45,9 @@ public class OrderSaga {
 
 	@Autowired
 	private transient QueryGateway queryGateway;
+
+	@Autowired
+	private transient QueryUpdateEmitter queryUpdateEmitter;
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OrderSaga.class);
 
@@ -64,7 +69,10 @@ public class OrderSaga {
 
 				if (commandResultMessage.isExceptional()) {
 					// Start a compensating transaction
-
+					RejectOrderCommand rejectOrderCommand = new RejectOrderCommand(orderCreatedEvent.getOrderId(),
+							commandResultMessage.exceptionResult().getMessage());
+					
+					commandGateway.send(rejectOrderCommand);
 				}
 
 			}
@@ -136,7 +144,9 @@ public class OrderSaga {
 	@SagaEventHandler(associationProperty = "orderId")
 	public void handle(OrderApprovedEvent orderApprovedEvent) {
 		LOGGER.info("Order is approved. Order Saga is complete for orderId: " + orderApprovedEvent.getOrderId());
-		SagaLifecycle.end();
+
+		queryUpdateEmitter.emit(FindOrderQuery.class, query -> true,
+				new OrderSummary(orderApprovedEvent.getOrderId(), orderApprovedEvent.getOrderStatus(), ""));
 	}
 
 	private void cancelProductReservation(ProductReservedEvent productReservedEvent, String reason) {
@@ -161,5 +171,8 @@ public class OrderSaga {
 	@SagaEventHandler(associationProperty = "orderId")
 	public void handle(OrderRejectedEvent orderRejectedEvent) {
 		LOGGER.info("Successfully rejected order with id " + orderRejectedEvent.getOrderId());
+
+		queryUpdateEmitter.emit(FindOrderQuery.class, query -> true, new OrderSummary(orderRejectedEvent.getOrderId(),
+				orderRejectedEvent.getOrderStatus(), orderRejectedEvent.getReason()));
 	}
 }
